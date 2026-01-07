@@ -33,54 +33,35 @@ brew install monshakeys/tap/aimvp
 
 ### Alternative Methods
 
-If you prefer not to use Homebrew, you can install using one of these methods:
-
-#### Build from Source
+- Download the latest binary from the [releases page](https://github.com/monshakeys/lscmd/releases) and place it in your `$PATH`.
+- Or these methods:
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone git@github.com:monshakeys/aimvp.git
 cd aimvp
 
-# For development - fast compilation
+# for dev
 cargo build
 ./target/debug/aimvp
 
-# For production - optimized performance
-cargo build --release
+# for prod
+cargo build --locked --release
 ./target/release/aimvp
 
-# Or run directly without building executable
+# run without building executable
 cargo run              # debug mode
 cargo run --release    # release mode
 
-# Install to system (optional)
+# install to path
 cargo install --path .
 ```
 
-#### Using Cargo
-
-If you have Rust installed:
-
-```bash
-cargo install --git <repo-url>
-```
-
-#### Download Binary
-
-Download the latest binary from the [releases page](https://github.com/monshakeys/aimvp/releases) and place it in your `$PATH`.
 
 ## Usage
 
 ```bash
-# Show help message
-aimvp --help
-
-# Basic usage - format a single file
-aimvp document.md
-
-# Format multiple files
-aimvp *.md
+TODO
 ```
 
 ## Project Structure

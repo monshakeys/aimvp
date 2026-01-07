@@ -1,14 +1,6 @@
 # shellcheck shell=zsh
 # ==============================================================================
-# aimvp: 格式化 Markdown 字串
-# 功能：
-# - 接收字串輸入，並進行一系列正規化處理
-#
-# 規則：
-# 1. 將行首的無序列表符號 `*` 換成 `-`
-# 2. 將列表標記 (`-` 或 `1.`) 後的多個空格，統一為一個
-# 3. 移除所有列表行中的粗體標記 `**`
-# 4. 移除所有標題行 (`#`) 中的粗體標記 `**`
+# aimvp: AI Markdown Visual Presentation
 # ==============================================================================
 aimvp() {
   # 如果 Homebrew 已安裝 aimvp 的話便直接呼叫
@@ -17,79 +9,105 @@ aimvp() {
     return
   fi
 
-  # 處理選項
-  case "$1" in
-    -h|--help|"")
-      local help_message="
-用法: aimvp <選項> <檔案路徑>
+  # --- 參數與選項處理 ---
+  if [[ "$1" == "-h" || "$1" == "--help" || -z "$1" ]]; then
+    local help_message="
+用法: aimvp <檔案路徑>
 
-高效的 Markdown 格式化工具
+針對 AI Agent 輸出的 markdown 格式檔案進行重新排版
+
+1. 使用 Prettier 進行整體格式化
+2. 使用 Pangu 在中英文之間添加空格
+3. 移除標題列 (H1-H6) 內部多餘的粗體標記
+4. 標準化標題列的空格
+5. 移除清單項目開頭的粗體標記
+6. 標準化清單項目的縮排與空格
 
 選項:
-  -h, --help         顯示此說明訊息
-  -f, --file <FILE>  讀取指定的 Markdown 檔案進行處理，
-                     並生成一個帶有 .mvp.md 後綴的新檔案。
-
-範例:
-  aimvp -f README.md
-  aimvp --file README.md
+  -h, --help  顯示此說明訊息
 "
-      echo -e "$help_message"
-      # 如果是明確請求 help，回傳成功(0)；否則是因無效輸入，回傳錯誤(1)
-      if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-        return 0
-      else
-        return 1
-      fi
-      ;;
-    -f|--file)
-      # --- 檔案處理模式 ---
-      local input_file="$2"
-      # 檢查是否提供了檔案名稱
-      if [[ -z "$input_file" ]]; then
-        echo "錯誤: 選項 '$1' 後面需要提供一個檔案路徑。" >&2
-        aimvp --help # 提示使用者正確用法
-        return 1
-      fi
-      # 檢查檔案是否存在
-      if [[ ! -f "$input_file" ]]; then
-        echo "錯誤: 找不到檔案 '$input_file'" >&2
-        return 1
-      fi
-      # 自動生成輸出檔名
-      local base_name="${input_file%.md}"
-      local output_file="${base_name}.mvp.md"
-      # 防呆機制：避免重複處理
-      if [[ "$input_file" == "$output_file" ]]; then
-        echo "錯誤: 輸入檔案和預計生成的輸出檔案名稱相同。" >&2
-        echo "提示: 請不要對 .mvp.md 檔案重複執行此腳本。" >&2
-        return 1
-      fi
-      # 核心 sed 處理 (輸入為檔案，輸出到新檔案)
-      sed -E \
-        -e 's/^([[:space:]]*)\*[[:space:]]/\1- /' \
-        -e 's/^([[:space:]]*(-|[0-9]+\.))[[:space:]]+/\1 /' \
-        -e '/^[[:space:]]*(-|[0-9]+\.)/ s/\*\*([^*]*)\*\*/\1/g' \
-        -e '/^#{1,6}[[:space:]]/ s/\*\*([^*]*)\*\*/\1/g' \
-        "$input_file" > "$output_file"
-
-      # pangu
-      if command -v npx &> /dev/null; then
-        npx pangu -f "$output_file" > "$output_file" || echo "⚠️ pangu 執行失敗，已跳過"
-      else
-        echo "⚠️ npx 不存在，跳過 pangu"
-      fi
-
-      # prettier
-      if command -v prettier &> /dev/null; then
-        prettier -w "$output_file" > /dev/null || echo "⚠️ prettier 執行失敗，已跳過"
-      else
-        echo "⚠️ prettier 不存在，跳過格式化"
-      fi
-      echo ""
-      echo "  ✔ 處理完成"
-      echo "  -> $output_file"
+    echo -e "$help_message"
+    # 如果是明確請求 help，回傳成功(0)；否則是因無效輸入，回傳錯誤(1)
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
       return 0
-      ;;
-  esac
+    else
+      return 1
+    fi
+  fi
+
+  local input_file="$1"
+
+  # --- 輸入檔案驗證 ---
+  if [[ ! -f "$input_file" ]]; then
+    echo "❌ 錯誤：檔案 '$input_file' 不存在。" >&2
+    return 1
+  fi
+
+  if [[ "${input_file:t:e}" != "md" ]]; then
+    echo "❌ 錯誤：僅支援 .md 副檔名的 Markdown 檔案。" >&2
+    return 1
+  fi
+
+  # --- 依賴工具檢查 ---
+  local required_tools=(npx sponge ugrep sed)
+  local missing_tool=0
+  for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      echo "⚠️ 警告：必要指令 '$tool' 不存在，請先安裝。" >&2
+      missing_tool=1
+    fi
+  done
+
+  if [[ $missing_tool -eq 1 ]]; then
+    echo "❌ 偵測到缺少必要工具，程式已終止。" >&2
+    return 1
+  fi
+
+  # --- 核心處理邏輯 ---
+  loading_with_status() {
+    local chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    local delay=0.1
+    local count=0
+    local status_file="/tmp/__aimvp__status"
+    local now_time=$(date '+%Y%m%d%H%M%S')
+    local file_backup=${input_file%.*}.backup.${now_time}.md
+    cp "$input_file" "$file_backup"
+
+    # 關閉工作控制
+    set +m
+    echo "RUNNING" > "$status_file"
+    # 背景執行
+    (
+      cat "$input_file" | \
+
+        ugrep -P -y -e '^(\s*)\* +(.*)' --replace='%1- %2' | \
+        sed -E '/^#/ s/\*\*//g' | \
+
+        npx prettier --parser markdown | \
+        { content=$(dd 2>/dev/null); npx pangu "$content"; } | \
+
+        ugrep -P -y -e '^(\s*)- +\*\*([^*]+)\*\*(.*)' --replace='%1- %2%3' | \
+        ugrep -P -y -e '^(\s*)([0-9]+)\. +\*\*([^*]+)\*\*(.*)' --replace='%1%2. %3%4' | \
+        ugrep -P -y -e '^(\s*)- +(.+)' --replace='%1- %2' | \
+        ugrep -P -y -e '^(\s*)([0-9]+)\. +(.+)' --replace='%1%2. %3' | \
+        sponge "$input_file"
+
+      echo "OK" > "$status_file"
+    ) >/dev/null 2>&1 &
+    local pid=$!
+    # 動畫循環
+    while [ "$(cat "$status_file" 2>/dev/null)" != "OK" ]; do
+      printf "\r✨ 檔案格式化中 ${chars:$((count % ${#chars})):1}"
+      sleep $delay
+      ((count++))
+    done
+    # 等待完成並清除
+    wait $pid
+    printf "\r\033[K"
+    # 重新啟用工作控制
+    set -m
+    rm -f "$status_file"
+    echo "✅ 檔案 '$input_file' 已成功格式化"
+  }
+  loading_with_status
 }
