@@ -29,6 +29,7 @@ Thumbs.db
 # ╚══════════╝
 # Visual Studio Settings
 .devcontainer/
+.idea/
 .vscode/
 .vscodeignore
 *.code-workspace
@@ -36,10 +37,11 @@ Thumbs.db
 # ╔══════╗
 # ╠  AI  ╣
 # ╚══════╝
-.claude/settings.local.json
-.kilocode/
-.serena/
-CLAUDE.local.md
+**/*/CLAUDE.md
+.claude/*.json
+.codex/*.toml
+.cursor/*.json
+.gemini/*.json
 
 # ╔════════╗
 # ╠  Node  ╣
@@ -52,19 +54,16 @@ node_modules/
 # ╔══════════╗
 # ╠  Python  ╣
 # ╚══════════╝
-# python byte-compiled
 *.py[cod]
+.coverage
+.ipynb_checkpoints
+.pytest_cache/
+.ruff_cache/
+.venv
+/media/
 __pycache__/
-# python package management
-.python-version
-poetry.lock
-pyproject.toml
-# coding style
-.flake8
-.pycodestyle
-# others
 htmlcov/
-media/
+venv/
 
 # ╔════════╗
 # ╠  Rust  ╣
@@ -76,23 +75,24 @@ target/
 # ╔═══════════╗
 # ╠  Develop  ╣
 # ╚═══════════╝
-!logs/**/
-!logs/**/.gitkeep
 *.log
+logs/**
+!logs/**/.gitkeep
 build/
 dist/
-logs/**
 out/
 sps/
 
 # ╔══════════════╗
 # ╠  Production  ╣
 # ╚══════════════╝
+*.key
+*.pem
 .env
 .env.dev
 .env.local
 .env.prod
-secrets/
+/secrets/
 
 # ╔══════════╗
 # ╠  Custom  ╣
